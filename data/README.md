@@ -1,0 +1,4 @@
+- domain_info.csv generated using scripts/get_domain_info.csv, contains info related to domains with a bimodal distribution;
+- afdb_protein_info.csv obtained with scripts/get_all_data_from_DB.py, contains all informations related to each protein herein analyzed derived from the pfam-alphafold database;
+- distributions.json obtained with scripts/get_distribution.py, contains the pLDDT distributions derived from the alphafold database;
+- *.png files are images of structures used to build figure1 of the paper;
