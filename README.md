@@ -4,7 +4,7 @@ This repository contains the scripts to reproduce the results published in ...
 
 ## Graphical diagram
 
-![Graphical scheme](figures/figureS3.png)
+![Graphical scheme](figures/figureS2.png)
 
 ## Dependencies
 
