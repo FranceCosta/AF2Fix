@@ -19,18 +19,13 @@ include { RANK as RANK_NO_TEMPLATE } from "${workflow.projectDir}/modules/af2ran
 include { RANK as RANK_TEMPLATE_MSA } from "${workflow.projectDir}/modules/af2rank" params(outdir: params.outdir, projectDir: "${workflow.projectDir}")
 include { RANK as RANK_TEMPLATE_SEQ } from "${workflow.projectDir}/modules/af2rank" params(outdir: params.outdir, projectDir: "${workflow.projectDir}")
 
-include { XHPI as XHPI_NO_TEMPLATE } from "${workflow.projectDir}/modules/xhpi" params(outdir: params.outdir, projectDir: "${workflow.projectDir}")
-include { XHPI as XHPI_TEMPLATE_MSA } from "${workflow.projectDir}/modules/xhpi" params(outdir: params.outdir, projectDir: "${workflow.projectDir}")
-include { XHPI as XHPI_TEMPLATE_SEQ } from "${workflow.projectDir}/modules/xhpi" params(outdir: params.outdir, projectDir: "${workflow.projectDir}")
-
-include { XHPI as PROCHECK_NO_TEMPLATE } from "${workflow.projectDir}/modules/procheck" params(outdir: params.outdir, projectDir: "${workflow.projectDir}")
-include { XHPI as PROCHECK_TEMPLATE_MSA } from "${workflow.projectDir}/modules/procheck" params(outdir: params.outdir, projectDir: "${workflow.projectDir}")
-include { XHPI as PROCHECK_TEMPLATE_SEQ } from "${workflow.projectDir}/modules/procheck" params(outdir: params.outdir, projectDir: "${workflow.projectDir}")
+include { XHPI as MOLPROB_NO_TEMPLATE } from "${workflow.projectDir}/modules/molprobity" params(outdir: params.outdir, projectDir: "${workflow.projectDir}")
+include { XHPI as MOLPROB_TEMPLATE_MSA } from "${workflow.projectDir}/modules/molprobity" params(outdir: params.outdir, projectDir: "${workflow.projectDir}")
+include { XHPI as MOLPROB_TEMPLATE_SEQ } from "${workflow.projectDir}/modules/molprobity" params(outdir: params.outdir, projectDir: "${workflow.projectDir}")
 
 process DOWNLOAD_COLABFOLD_WEIGHTS {
 
     container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
-    queue 'short'
     time '2h'
     tag 'download_colabfold_weights'
     publishDir "${params.colabfold_cache}/", mode: 'copy', overwrite: true
@@ -61,7 +56,6 @@ process DOWNLOAD_COLABFOLD_WEIGHTS {
 process QUERY_DB {
     label 'python38'
     memory '500MB'
-    queue 'short'
     tag 'query-db'
     publishDir "$params.outdir/DB_query", mode: 'copy'
   
@@ -76,7 +70,6 @@ process QUERY_DB {
 process QUERY_DB_WITH_INPUT {
     label 'python38'
     memory '500MB'
-    queue 'short'
     tag 'query-db'
     publishDir "$params.outdir/DB_query", mode: 'copy'
   
@@ -91,7 +84,6 @@ process QUERY_DB_WITH_INPUT {
 process GET_SEQUENCES {
     
     memory '500MB'
-    queue 'short'
     tag 'get_sequences'
     publishDir "$params.outdir/DB_query", mode: 'copy'
 
@@ -108,7 +100,6 @@ process GET_SEQUENCES {
 
 process DOWNLOAD_DOMAIN_LENGTHS {
 
-    queue 'short'
     time '2h'
     tag 'download_domain_lwnghts'
     publishDir "${params.outdir}/DB_query/", mode: 'copy'
@@ -130,7 +121,6 @@ process GET_MSAS {
    container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
    memory '180GB' // normally 180
    tag 'get_msas'
-   queue 'standard'
    publishDir "$params.outdir/AF2/MSAs", mode: 'copy'
    
    input:
@@ -146,7 +136,6 @@ process GET_MSAS {
 }
 
 process GET_TEST_MSA {
-    queue 'short'
     memory '300MB'
     //publishDir "$params.outdir/MSAs", mode: 'copy', pattern: 'PF*/*.a3m' // this does not work
     //publishDir "$params.outdir/MSAs", mode: 'copy' // this works
@@ -168,8 +157,8 @@ process PREDICT_NO_TEMPLATE {
    
     container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
     tag 'predict_no_template'
-    queue 'gpu-a100'
-    clusterOptions '-gpu num=1:gmem=10GB'
+    memory '10G'
+    clusterOptions '--gres=gpu:a100:1'
     containerOptions '--nv'
     publishDir "$params.outdir/AF2/no_template/${domain}", mode: 'copy', pattern: '*_relaxed_rank_001_*.pdb'
     publishDir "$params.outdir/AF2/no_template/${domain}", mode: 'copy', pattern: '*_scores_rank_001_*.json'
@@ -200,7 +189,6 @@ process GET_TEMPLATES {
     
     container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
     tag 'get_templates'
-    queue 'short'
     publishDir "$params.outdir/AF2/templates/$domain/", mode: 'copy', pattern: '*.cif'
     publishDir "$params.outdir/AF2/templates/$domain/", mode: 'copy', pattern: '.mapper.json'
 
@@ -224,8 +212,8 @@ process PREDICT_TEMPLATE_MSA {
 
     container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
     tag 'predict_no_template'
-    queue 'gpu-a100'
-    clusterOptions '-gpu num=1:gmem=15GB'
+    memory '10G'
+    clusterOptions '--gres=gpu:a100:1'
     containerOptions '--nv'
     publishDir "$params.outdir/AF2/template_MSA/$domain", mode: 'copy'
     errorStrategy "ignore"
@@ -258,8 +246,8 @@ process PREDICT_TEMPLATE_SEQ {
 
     container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
     tag 'predict_no_template'
-    queue 'gpu-a100'
-    clusterOptions '-gpu num=1:gmem=15GB'
+    memory '15G'
+    clusterOptions '--gres=gpu:a100:1'
     containerOptions '--nv'
     publishDir "$params.outdir/AF2/template_single_seq/$domain", mode: 'copy'
     errorStrategy "ignore"
@@ -302,7 +290,6 @@ process COLLECT_RESULTS {
    
     label 'python38'
     tag 'collect_results'
-    queue 'short'
     publishDir "$params.outdir/summary_results/", mode: 'copy' // this finishes after pipeline has completed lol
     // saveAs
 
@@ -374,19 +361,15 @@ workflow predictions {
         
         PREDICT_TEMPLATE_MSA(GET_TEMPLATES.out.templates_msa, weights)
         PREDICT_TEMPLATE_SEQ(GET_TEMPLATES.out.templates_msa, weights)
-        // validate pipeline output with AF2Rank
+        // AF2Rank
         // use .transpose() to have as input one .pdb at time
         RANK_NO_TEMPLATE(PREDICT_NO_TEMPLATE.out.pdb_structures_domain.transpose(), "no_template")
         RANK_TEMPLATE_MSA(PREDICT_TEMPLATE_MSA.out.pdb_structures_domain.transpose(), "template_MSA")
         RANK_TEMPLATE_SEQ(PREDICT_TEMPLATE_SEQ.out.pdb_structures_domain.transpose(), "template_single_seq")
-        // validate pipeline output by measuring Xh-Pi interactions
-        XHPI_NO_TEMPLATE(PREDICT_NO_TEMPLATE.out.pdb_structures_domain, "no_template")
-        XHPI_TEMPLATE_MSA(PREDICT_TEMPLATE_MSA.out.pdb_structures_domain, "template_MSA")
-        XHPI_TEMPLATE_SEQ(PREDICT_TEMPLATE_SEQ.out.pdb_structures_domain, "template_single_seq")
-        // validate output by finding ramachandran outliers
-        RAMACHANDRAN_NO_TEMPLATE(PREDICT_NO_TEMPLATE.out.pdb_structures_domain, "no_template")
-        RAMACHANDRAN_TEMPLATE_MSA(PREDICT_TEMPLATE_MSA.out.pdb_structures_domain, "template_MSA")
-        RAMACHANDRAN_TEMPLATE_SEQ(PREDICT_TEMPLATE_SEQ.out.pdb_structures_domain, "template_single_seq")
+        // Molprobity
+        MOLPROB_NO_TEMPLATE(PREDICT_NO_TEMPLATE.out.pdb_structures_domain, "no_template")
+        MOLPROB_TEMPLATE_MSA(PREDICT_TEMPLATE_MSA.out.pdb_structures_domain, "template_MSA")
+        MOLPROB_TEMPLATE_SEQ(PREDICT_TEMPLATE_SEQ.out.pdb_structures_domain, "template_single_seq")
 
         // collect results after completion of previous processes
         // not very robust as files may not be in the publishDir by time 

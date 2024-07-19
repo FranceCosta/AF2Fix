@@ -50,7 +50,7 @@ The scripts contained in [scripts](scripts/) were also adopted:
 
 The [images](images) can be reproduced using [this notebook](generate_figures.ipynb) after downloading the results ...
 Image figureS3 was obtained with [draw.io](https://www.drawio.com/).
-Dependencies needed: python 3.8, seaborn (version 12.2), pandas (version 1.5.3), matplotlib (version 3.6.2), numpy (version 1.24.3), Biopython (version 1.81), scikit-learn (version 1.2.2), 
+Dependencies needed for image generation: python 3.8, seaborn (version 12.2), pandas (version 1.5.3), matplotlib (version 3.6.2), numpy (version 1.24.3), Biopython (version 1.81), scikit-learn (version 1.2.2), 
 
 
 [The diagram](figures/AF2Fix_diagram.png) was generated with https://app.diagrams.net

@@ -6,8 +6,8 @@ process RANK {
 
     module 'cuda-11.1.1-gcc-9.3.0-oqr2b7d'
     tag 'rank'
-    queue 'gpu-a100'
-    clusterOptions '-gpu num=1:gmem=20GB'
+    memory '20G'
+    clusterOptions '--gres=gpu:a100:1'
     publishDir "$params.outdir/AF2Rank/$condition/$domain", mode: 'copy'
     errorStrategy 'ignore'
 

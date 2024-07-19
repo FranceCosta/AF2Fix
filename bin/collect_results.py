@@ -35,16 +35,9 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--xhpi_res_dir", 
+    "--molprobity_res_dir", 
     required=True, 
-    help="Path/to/xhpi results dir. Should contain no_template, template_MSA, template_single_seq subfolders", 
-    type=str
-)
-
-parser.add_argument(
-    "--procheck_res_dir", 
-    required=True, 
-    help="Path/to/xhpi results dir. Should contain no_template, template_MSA, template_single_seq subfolders", 
+    help="Path/to/molprobity results dir. Should contain no_template, template_MSA, template_single_seq subfolders", 
     type=str
 )
 
@@ -61,20 +54,15 @@ def main():
 
     # collect AF2Rank data
     af2Rank_results = collect_AF2_rank(args.AF2Rank_res_dir)
-    #df = pd.merge(df, af2Rank_results, on=['pfamA_acc', 'uniprot_acc', 'confition'])
-    
-    # collect ramachandran outliers data
-    procheck_results = collect_procheck(args.procheck_res_dir)
     
     # collect Pi-Hx interactions data
-    xhpi_results = collect_xhpi(args.xhpi_res_dir)
+    molprobity_results = collect_molprobity(args.molprobity_res_dir)
     
     # save data
     protein_info.to_csv('protein_info_data.csv', index=False)
     df.to_csv('AF2Results.csv', index=False)
     af2Rank_results.to_csv('af2Rank_results.csv', index=False)
-    xhpi_results.to_csv('xhpi_results.csv', index=False)
-    procheck_results.to_csv('ramachandran_results.csv', index=False)
+    molprobity_results.to_csv('molprobity_results.csv', index=False)
 
 def collect_db_info(database_res_dir: str) -> pd.DataFrame:
     """Collect pfam and af2 databases info"""
@@ -219,46 +207,23 @@ def collect_AF2_rank(AF2Rank_res_dir: str) -> pd.DataFrame:
     return df_rank.rename(columns={'rms_out': 'af2rank_rms_out',
                                       'tm_out': 'af2rank_tm_out', 'plddt': 'af2rank_plddt',
                                       'ptm': 'af2rank_ptm', 'composite': 'af2rank_composite'})
-    
-def collect_xhpi(xhpi_res_dir: str) -> pd.DataFrame:
-    """Collect output data for xhpi_calculation"""
-    
 
-    df_xhpi = pd.DataFrame(columns=['condition', 'pfamA_acc', 'uniprot_acc', 'x_res_id','x_res_num','x_atom_id','x_atom_type','x_atom_num','x_bfactor',
-    'x_chain','resolution','pi_res_id','pi_res_num','pi_bfactor','pi_chain','Xdist','Xtheta','planar_angle',
-    'x_height','x_width','x_pos','x_group'])
+def collect_molprobity(molprobity_res_dir: str) -> pd.DataFrame:
+    """Collect output data for molprobity_calculation"""
 
+    df_molprobity = pd.DataFrame(columns=['condition', 'pfamA_acc', 'uniprot_acc', 'Ramachandran outliers', 'favored', 'Rotamer outliers',
+                                          'C-beta deviations', 'Clashscore', 'RMS(bonds)', 'RMS(angles)','MolProbity score'])
     for condition in CONDITIONS:
-        for pfamA_acc in filter(lambda x: x.startswith('PF'), os.listdir(os.path.join(xhpi_res_dir, condition))):
-            for file in filter(lambda x: x.endswith('.csv'), os.listdir(os.path.join(xhpi_res_dir, condition, pfamA_acc))):
-                tmp_df = pd.read_csv(os.path.join(xhpi_res_dir, condition, pfamA_acc, file))
-                uniprot_acc = file.replace(".csv", "")
-                tmp_df['pdb'] = uniprot_acc
-                tmp_df['condition'] = condition
-                tmp_df['pfamA_acc'] = pfamA_acc
-                tmp_df = tmp_df.rename(columns={'pdb': 'uniprot_acc'})
-                df_xhpi = pd.concat([df_xhpi, tmp_df])
-    
-    return df_xhpi
-
-def collect_procheck(procheck_res_dir: str) -> pd.DataFrame:
-    """Collect output data for xhpi_calculation"""
-    
-
-    df_procheck = pd.DataFrame(columns=['condition', 'pfamA_acc', 'uniprot_acc', 'core', 'allow', 'gener', 'disall'])
-
-    for condition in CONDITIONS:
-        for pfamA_acc in filter(lambda x: x.startswith('PF'), os.listdir(os.path.join(procheck_res_dir, condition))):
-            for file in filter(lambda x: x.endswith('.csv'), os.listdir(os.path.join(procheck_res_dir, condition, pfamA_acc))):
-                tmp_df = pd.read_csv(os.path.join(procheck_res_dir, condition, pfamA_acc, file))
+        for pfamA_acc in filter(lambda x: x.startswith('PF'), os.listdir(os.path.join(molprobity_res_dir, condition))):
+            for file in filter(lambda x: x.endswith('.csv'), os.listdir(os.path.join(molprobity_res_dir, condition, pfamA_acc))):
+                tmp_df = pd.read_csv(os.path.join(molprobity_res_dir, condition, pfamA_acc, file))
                 uniprot_acc = file.replace(".csv", "").split("_")[0]
-                tmp_df['prot_name'] = uniprot_acc
+                tmp_df['uniprot_acc'] = uniprot_acc
                 tmp_df['condition'] = condition
                 tmp_df['pfamA_acc'] = pfamA_acc
-                tmp_df = tmp_df.rename(columns={'prot_name': 'uniprot_acc'})
-                df_procheck = pd.concat([df_procheck, tmp_df])
+                df_molprobity= pd.concat([df_molprobity, tmp_df])
     
-    return df_procheck
+    return df_molprobity
 
 if __name__ == '__main__':
     main()
