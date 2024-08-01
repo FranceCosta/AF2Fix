@@ -35,10 +35,10 @@ chmod +x bin/*
 To reproduce the results obtained in the paper, run the following:
 
 ```
-bsub < sh/run.sh
+sbatch < scripts/run.sh
 ```
 
-To run the pipeline on a customised set of proteins, use [this script](sh/run_custom_proteins.sh) as example. Note that you will need to specify the proteins and the domain to be used for each protein.
+To run the pipeline on a customised set of proteins, use [this script](scripts/run_custom_proteins.sh) as example. Note that you will need to specify the proteins and the domain to be used for each protein.
 
 ## Other scripts 
 

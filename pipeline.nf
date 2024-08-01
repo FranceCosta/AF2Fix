@@ -6,11 +6,12 @@ params.pfamhost = "mysql-pfam-rel" // hostname for MySQL database
 params.pfamport = "" // port for MySQL database
 params.proteins_table = "${workflow.projectDir}/input/protein_table_solenoids.csv" // input protein table to run pipeline on customized proteins. Run with -entry improve
 params.outdir  = "${workflow.projectDir}/output"
-//params.afdatabase = "/hps/nobackup/agb/interpro/mblum/alphafold/pfam-alphafold.sqlite.old" // db with per-domain af distribution
-params.afdatabase = "${workflow.projectDir}/assets/pfam-alphafold.sqlite"
+params.afdatabase = "/hps/nobackup/agb/interpro/mblum/alphafold/pfam-alphafold.sqlite.old" // db with per-domain af distribution
+//params.afdatabase = "${workflow.projectDir}/assets/pfam-alphafold.sqlite"
 params.domains_to_consider = 50 // Number of protein domains to include in the pipeline
 params.proteins_per_class = 10 // Number of protein candidates to consider per class of AlphaFold confidence (<50, 50-70, >70 plddt). 10 more will be included and discarded by later script
-params.colabfold_database =  "${workflow.projectDir}/assets/" //"/nfs/research/agb/research/francesco/software/localcolabfold/databases/"
+params.colabfold_database = "/hps/nobackup/agb/research/francesco/data/colabfold/20240226_databases"
+//params.colabfold_database =  "${workflow.projectDir}/assets/" //
 params.colabfold_cache = "${workflow.projectDir}/tmp/"
 params.test_msa = "${workflow.projectDir}/test"
 
@@ -19,9 +20,9 @@ include { RANK as RANK_NO_TEMPLATE } from "${workflow.projectDir}/modules/af2ran
 include { RANK as RANK_TEMPLATE_MSA } from "${workflow.projectDir}/modules/af2rank" params(outdir: params.outdir, projectDir: "${workflow.projectDir}")
 include { RANK as RANK_TEMPLATE_SEQ } from "${workflow.projectDir}/modules/af2rank" params(outdir: params.outdir, projectDir: "${workflow.projectDir}")
 
-include { XHPI as MOLPROB_NO_TEMPLATE } from "${workflow.projectDir}/modules/molprobity" params(outdir: params.outdir, projectDir: "${workflow.projectDir}")
-include { XHPI as MOLPROB_TEMPLATE_MSA } from "${workflow.projectDir}/modules/molprobity" params(outdir: params.outdir, projectDir: "${workflow.projectDir}")
-include { XHPI as MOLPROB_TEMPLATE_SEQ } from "${workflow.projectDir}/modules/molprobity" params(outdir: params.outdir, projectDir: "${workflow.projectDir}")
+include { MOLPROBITY as MOLPROB_NO_TEMPLATE } from "${workflow.projectDir}/modules/molprobity" params(outdir: params.outdir, projectDir: "${workflow.projectDir}")
+include { MOLPROBITY as MOLPROB_TEMPLATE_MSA } from "${workflow.projectDir}/modules/molprobity" params(outdir: params.outdir, projectDir: "${workflow.projectDir}")
+include { MOLPROBITY as MOLPROB_TEMPLATE_SEQ } from "${workflow.projectDir}/modules/molprobity" params(outdir: params.outdir, projectDir: "${workflow.projectDir}")
 
 process DOWNLOAD_COLABFOLD_WEIGHTS {
 
@@ -37,7 +38,6 @@ process DOWNLOAD_COLABFOLD_WEIGHTS {
     """
     download_colabfold_weights.py
     """
-    /*
     // bug prone code:
     // do not download if already existing
     script:
@@ -50,7 +50,6 @@ process DOWNLOAD_COLABFOLD_WEIGHTS {
         """
         download_colabfold_weights.py
         """
-    */
 }
 
 process QUERY_DB {
@@ -295,8 +294,7 @@ process COLLECT_RESULTS {
 
     input:
     val rank_mock
-    val xhpi_mock
-    val procheck_mock
+    val molprob_mock
 
 
     output:
@@ -311,8 +309,7 @@ process COLLECT_RESULTS {
     fi
     
     collect_results.py --AFres_dir \$outdir/AF2/ --AF2Rank_res_dir \$outdir/AF2Rank/\
-                        --database_res_dir \$outdir/DB_query/ --xhpi_res_dir \$outdir/xhpi/\
-                        --procheck_res_dir \$outdir/ramachandran
+                        --database_res_dir \$outdir/DB_query/ --molprobity_res_dir \$outdir/molprobity/
     """
 
 }
@@ -383,33 +380,25 @@ workflow predictions {
             .last()\
             .set{ rank_out }
 
-        XHPI_NO_TEMPLATE.out.summary.flatten()\
-            .mix(XHPI_TEMPLATE_MSA.out.summary.flatten(), XHPI_TEMPLATE_SEQ.out.summary.flatten())\
+        MOLPROB_NO_TEMPLATE.out.summary.flatten()\
+            .mix(MOLPROB_TEMPLATE_MSA.out.summary.flatten(), MOLPROB_TEMPLATE_SEQ.out.summary.flatten())\
             .collectFile(skip: 1, keepHeader: true)\
             .last()\
-            .set{ xhpi_out }
-
-        RAMACHANDRAN_NO_TEMPLATE.out.summary.flatten()\
-            .mix(RAMACHANDRAN_TEMPLATE_MSA.out.summary.flatten(), RAMACHANDRAN_TEMPLATE_SEQ.out.summary.flatten())\
-            .collectFile(skip: 1, keepHeader: true)\
-            .last()\
-            .set{ procheck_out }
+            .set{ molprob_out }
         
     emit:
         rank_out = rank_out
-        xhpi_out = xhpi_out
-        procheck_out = procheck_out
+        molprob_out = molprob_out
 
 } 
 
 workflow collect_results {
     take:
         rank_out
-        xhpi_out
-        procheck_out
+        molprob_out
 
     main:
-        COLLECT_RESULTS(rank_out, xhpi_out, procheck_out)
+        COLLECT_RESULTS(rank_out, molprob_out)
 }
 
 workflow {
@@ -419,7 +408,7 @@ workflow {
     predictions(preparation.out.weights, preparation.out.proteins_info)
     // maybe this way collect_result() will run after files have been moved to 
     // outputdir by predictions()
-    collect_results(predictions.out.rank_out, predictions.out.xhpi_out, predictions.out.procheck_out)
+    collect_results(predictions.out.rank_out, predictions.out.molprob_out)
 }
 
 workflow improve {

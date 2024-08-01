@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
-
-### script to run the pipeline to improve custom proteins
-
-#BSUB -o log.log
-#BSUB -e .err
-#BSUB -M 20GB
-#BSUB -J "AF2Fix-customised"
+#SBATCH -o .log
+#SBATCH -e .err
+#SBATCH --mem 20GB
+#SBATCH --job-name "AF2Fix"
 
 set -euo pipefail
 IFS=$'\n\t'
@@ -22,5 +19,5 @@ export HADOOP_USER_CLASSPATH_FIRST=true
 # in case of building errors
 # export SINGULARITY_DISABLE_CACHE=yes
 
-nextflow run -c .config pipeline.nf true -with-trace -resume -entry example/protein_table.csv --outdir example
+nextflow run -c .config pipeline.nf -with-trace -resume
 
