@@ -4,7 +4,7 @@ params.pfamuser = "admin"     // user name for MySQL pfam database
 params.pfampassword = "" // password for MySQL pfam database
 params.pfamhost = "mysql-pfam-rel" // hostname for MySQL database
 params.pfamport = "" // port for MySQL database
-params.proteins_table = "${workflow.projectDir}/input/protein_table_solenoids.csv" // input protein table to run pipeline on customized proteins. Run with -entry improve
+params.proteins_table = "${workflow.projectDir}/example/protein_table.csv" // input protein table to run pipeline on customized proteins. Run with -entry improve
 params.outdir  = "${workflow.projectDir}/output"
 params.afdatabase = "/hps/nobackup/agb/interpro/mblum/alphafold/pfam-alphafold.sqlite.old" // db with per-domain af distribution
 //params.afdatabase = "${workflow.projectDir}/assets/pfam-alphafold.sqlite"
@@ -27,7 +27,8 @@ include { MOLPROBITY as MOLPROB_TEMPLATE_SEQ } from "${workflow.projectDir}/modu
 process DOWNLOAD_COLABFOLD_WEIGHTS {
 
     container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
-    time '2h'
+    time '20m'
+    memory '200MB'
     tag 'download_colabfold_weights'
     publishDir "${params.colabfold_cache}/", mode: 'copy', overwrite: true
     errorStrategy 'retry' // tries a second time
@@ -38,24 +39,13 @@ process DOWNLOAD_COLABFOLD_WEIGHTS {
     """
     download_colabfold_weights.py
     """
-    // bug prone code:
-    // do not download if already existing
-    script:
-    if( file("${params.colabfold_cache}/params/download_finished.txt").exists() == true )
-        """
-        touch download_finished.txt
-        """
-    
-    else if( file("${params.colabfold_cache}/params/download_finished.txt").exists() == false )
-        """
-        download_colabfold_weights.py
-        """
 }
 
 process QUERY_DB {
     label 'python38'
     memory '500MB'
     tag 'query-db'
+    time '2h'
     publishDir "$params.outdir/DB_query", mode: 'copy'
   
     output:
@@ -66,10 +56,27 @@ process QUERY_DB {
     """
 }
 
+process QUERY_DB_TEST {
+    label 'python38'
+    memory '500MB'
+    tag 'query-db'
+    time '2h'
+    publishDir "$params.outdir/DB_query", mode: 'copy'
+  
+    output:
+    path 'proteins_per_domain.csv', emit: proteins_per_domain
+    
+    """
+    echo "PF11361 A0A368WH52_9FIRM,A0A315REV6_9FIRM,A0A1E5HXZ1_9FIRM,A0A1I0AKN1_9FIRM,A0A1N6XNT3_9FIRM,A0A4R6SCZ4_9FIRM,M5ECE6_9FIRM,A0A4R6LDU5_9FIRM,E3DM68_HALPG,A0A2T5RRP8_9FIRM,A0A4R7Z519_9FIRM,E4RK56_HALHG,A0A7X6TSH1_CLOSP,A0A143YLW6_9LACT,A0A1W1IE60_9LACT,A0A847D4P1_9LACT,A0A0R2PT75_9MICO,A0A5C5ECL3_9LACT,A0A3P7S2P6_9FIRM,A0A1H6ETX2_9ACTN\n" > proteins_per_domain.csv
+    echo "PF15176 A0A3B5R9I5_XIPMA,A0A3Q7THB7_VULVU,A0A663F048_AQUCH,K7FNB5_PELSI,A0A811ZG69_NYCPR,A0A3P9IZ15_ORYLA,A0A383ZP48_BALAS,A0A3B3WEP9_9TELE,A0A6P9BDQ4_PANGU,G1NBL5_MELGA,A0A2I0M5B1_COLLI,A0A3Q1M5I3_BOVIN,K4G0F4_CALMI,A0A1U7TKA7_CARSF,A0A6I9IN50_VICPA,A0A5E4CM12_MARMO,A0A5C6NUQ8_9TELE,A0A1S3FIE4_DIPOR,A0A6P5PGU9_MUSCR,A0A5N4EAV5_CAMDR" >> proteins_per_domain.csv
+    """
+}
+
 process QUERY_DB_WITH_INPUT {
     label 'python38'
     memory '500MB'
     tag 'query-db'
+    time '2h'
     publishDir "$params.outdir/DB_query", mode: 'copy'
   
     output:
@@ -84,6 +91,7 @@ process GET_SEQUENCES {
     
     memory '500MB'
     tag 'get_sequences'
+    time '30m'
     publishDir "$params.outdir/DB_query", mode: 'copy'
 
     input:
@@ -100,7 +108,8 @@ process GET_SEQUENCES {
 process DOWNLOAD_DOMAIN_LENGTHS {
 
     time '2h'
-    tag 'download_domain_lwnghts'
+    tag 'download_domain_lenghts'
+    memory '500MB'
     publishDir "${params.outdir}/DB_query/", mode: 'copy'
     
     input:
@@ -120,6 +129,7 @@ process GET_MSAS {
    container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
    memory '180GB' // normally 180
    tag 'get_msas'
+   time '48h'
    publishDir "$params.outdir/AF2/MSAs", mode: 'copy'
    
    input:
@@ -136,6 +146,7 @@ process GET_MSAS {
 
 process GET_TEST_MSA {
     memory '300MB'
+    time '10m'
     //publishDir "$params.outdir/MSAs", mode: 'copy', pattern: 'PF*/*.a3m' // this does not work
     //publishDir "$params.outdir/MSAs", mode: 'copy' // this works
     publishDir "$params.outdir/AF2/MSAs", mode: 'copy', pattern: "PF*" //this works
@@ -157,6 +168,7 @@ process PREDICT_NO_TEMPLATE {
     container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
     tag 'predict_no_template'
     memory '10G'
+    time '10h'
     clusterOptions '--gres=gpu:a100:1'
     containerOptions '--nv'
     publishDir "$params.outdir/AF2/no_template/${domain}", mode: 'copy', pattern: '*_relaxed_rank_001_*.pdb'
@@ -188,6 +200,7 @@ process GET_TEMPLATES {
     
     container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
     tag 'get_templates'
+    time '10m'
     publishDir "$params.outdir/AF2/templates/$domain/", mode: 'copy', pattern: '*.cif'
     publishDir "$params.outdir/AF2/templates/$domain/", mode: 'copy', pattern: '.mapper.json'
 
@@ -212,6 +225,7 @@ process PREDICT_TEMPLATE_MSA {
     container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
     tag 'predict_no_template'
     memory '10G'
+    time '10h'
     clusterOptions '--gres=gpu:a100:1'
     containerOptions '--nv'
     publishDir "$params.outdir/AF2/template_MSA/$domain", mode: 'copy'
@@ -246,6 +260,7 @@ process PREDICT_TEMPLATE_SEQ {
     container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
     tag 'predict_no_template'
     memory '15G'
+    time '10h'
     clusterOptions '--gres=gpu:a100:1'
     containerOptions '--nv'
     publishDir "$params.outdir/AF2/template_single_seq/$domain", mode: 'copy'
@@ -288,6 +303,7 @@ process PREDICT_TEMPLATE_SEQ {
 process COLLECT_RESULTS {
    
     label 'python38'
+    time '2h'
     tag 'collect_results'
     publishDir "$params.outdir/summary_results/", mode: 'copy' // this finishes after pipeline has completed lol
     // saveAs
@@ -421,14 +437,52 @@ workflow improve {
 }
 
 workflow test {
-    // test if nextflow is copying things to publishDir
-    //GET_TEST_MSA()
-    //GET_TEST_MSA.out.path_to_msa_file\
-    //    .flatten()
-    //    .view { "MSA generated: $it"}
 
-    // test correct tuple unpacking
-    Channel.of( [['alpha', 'beta', 'delta'], 1], [['gamma', 'epsilon'], 2] )\
-        .transpose()\
-        .view { it }
+    // Test the pipeline on a small set
+    DOWNLOAD_COLABFOLD_WEIGHTS()
+    QUERY_DB_TEST()
+    GET_SEQUENCES(QUERY_DB_TEST.out.proteins_per_domain)
+    DOWNLOAD_DOMAIN_LENGTHS(GET_SEQUENCES.out.proteins_info)
+
+    GET_MSAS(GET_SEQUENCES.out.proteins_info)
+    // 
+    PREDICT_NO_TEMPLATE(GET_MSAS.out.path_to_msa.flatten(), DOWNLOAD_COLABFOLD_WEIGHTS.out.weights)
+
+    // create a set of unique paths to domain folders containing no template MSA AlphaFold results
+    //PREDICT_NO_TEMPLATE.out.pdb_structure.collect().flatMap{ file -> "${file.toString().split('/')[-2]}" }.unique().set{ no_template_domains }
+    GET_TEMPLATES(PREDICT_NO_TEMPLATE.out.output_and_msa)
+    //GET_TEMPLATES.out.templates_msa.view { "$it" }
+    
+    PREDICT_TEMPLATE_MSA(GET_TEMPLATES.out.templates_msa, DOWNLOAD_COLABFOLD_WEIGHTS.out.weights)
+    PREDICT_TEMPLATE_SEQ(GET_TEMPLATES.out.templates_msa, DOWNLOAD_COLABFOLD_WEIGHTS.out.weights)
+    // AF2Rank
+    // use .transpose() to have as input one .pdb at time
+    RANK_NO_TEMPLATE(PREDICT_NO_TEMPLATE.out.pdb_structures_domain.transpose(), "no_template")
+    RANK_TEMPLATE_MSA(PREDICT_TEMPLATE_MSA.out.pdb_structures_domain.transpose(), "template_MSA")
+    RANK_TEMPLATE_SEQ(PREDICT_TEMPLATE_SEQ.out.pdb_structures_domain.transpose(), "template_single_seq")
+    // Molprobity
+    MOLPROB_NO_TEMPLATE(PREDICT_NO_TEMPLATE.out.pdb_structures_domain, "no_template")
+    MOLPROB_TEMPLATE_MSA(PREDICT_TEMPLATE_MSA.out.pdb_structures_domain, "template_MSA")
+    MOLPROB_TEMPLATE_SEQ(PREDICT_TEMPLATE_SEQ.out.pdb_structures_domain, "template_single_seq")
+
+    // collect results after completion of previous processes
+    // not very robust as files may not be in the publishDir by time 
+    // COLLECT_RESULTS is run
+    // alternatevly one could use symlinks to a scratch directory and
+    // delete il later
+    
+    RANK_NO_TEMPLATE.out.csv_table.flatten()\
+        .mix(RANK_TEMPLATE_MSA.out.csv_table.flatten(), RANK_TEMPLATE_SEQ.out.csv_table.flatten())\
+        .collectFile(skip: 1, keepHeader: true)\
+        .last()\
+        .set{ rank_out }
+
+    MOLPROB_NO_TEMPLATE.out.summary.flatten()\
+        .mix(MOLPROB_TEMPLATE_MSA.out.summary.flatten(), MOLPROB_TEMPLATE_SEQ.out.summary.flatten())\
+        .collectFile(skip: 1, keepHeader: true)\
+        .last()\
+        .set{ molprob_out }
+
+    COLLECT_RESULTS(rank_out, molprob_out)
+    
 }

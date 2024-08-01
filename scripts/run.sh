@@ -3,6 +3,7 @@
 #SBATCH -e .err
 #SBATCH --mem 20GB
 #SBATCH --job-name "AF2Fix"
+#SBATCH --time 24:00:00
 
 set -euo pipefail
 IFS=$'\n\t'

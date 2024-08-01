@@ -4,11 +4,11 @@ This repository contains the scripts to reproduce the results published in ...
 
 ## Graphical diagram
 
-![Graphical scheme](figures/figureS2.png)
+![Graphical scheme](data/workflow.png)
 
 ## Dependencies
 
-The pipeline is designed to run on an high perfromance computing cluster through [LSF](https://www.ibm.com/docs/en/spectrum-lsf/10.1.0?topic=management-job-submission) via [NEXTFLOW](https://www.nextflow.io/) (version 23.04.1).
+The pipeline is designed to run on an high perfromance computing cluster through [SLURM](https://slurm.schedmd.com/documentation.html) via [NEXTFLOW](https://www.nextflow.io/) (version 23.04.1).
 
 ### ColabFold database
 Download ColabFold databases as explained [here](https://github.com/sokrypton/ColabFold) and place them in [assets](assets/)
@@ -45,11 +45,11 @@ To run the pipeline on a customised set of proteins, use [this script](scripts/r
 The scripts contained in [scripts](scripts/) were also adopted:
 
 - estimate_co2.sh was used to estimate the amount of CO2 produced with the computation;
-- get_distribution.py was used to extract the whole pLDDT pfam distributions;
+- get_distribution.py was used to extract the whole plDDT pfam distributions;
 - get_domain_info.sh was used to extract the information about domains considered in the paper;
 
 The [images](images) can be reproduced using [this notebook](generate_figures.ipynb) after downloading the results ...
-Image figureS3 was obtained with [draw.io](https://www.drawio.com/).
+The workflow image was obtained with [draw.io](https://www.drawio.com/).
 Dependencies needed for image generation: python 3.8, seaborn (version 12.2), pandas (version 1.5.3), matplotlib (version 3.6.2), numpy (version 1.24.3), Biopython (version 1.81), scikit-learn (version 1.2.2), 
 
 

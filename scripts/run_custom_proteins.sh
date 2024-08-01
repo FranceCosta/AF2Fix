@@ -7,6 +7,7 @@
 #SBATCH -e .err
 #SBATCH --mem 20GB
 #SBATCH --job-name "AF2Fix-cusomised"
+#SBATCH --time 24:00:00
 
 set -euo pipefail
 IFS=$'\n\t'
@@ -20,8 +21,7 @@ export NXF_SINGULARITY_CACHEDIR='assets/'
 export NXF_OPTS='-Dnxf.pool.type=sync -Dnxf.pool.maxThreads=10000'
 export HADOOP_USER_CLASSPATH_FIRST=true
 
-# in case of building errors
+# in case of building errors:
 # export SINGULARITY_DISABLE_CACHE=yes
 
-nextflow run -c .config pipeline.nf true -with-trace -resume -entry example/protein_table.csv --outdir example
-
+nextflow run -c .config pipeline.nf true -with-trace -resume --proteins_table example/protein_table.csv --outdir example
