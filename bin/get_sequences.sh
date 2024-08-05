@@ -17,6 +17,12 @@ while getopts ":i:o:n:u:p:h:P:" flag; do
     esac
 done
 
+cmd="mysql -h $SQLhost -u $SQLuser -p$SQLpassword -P $SQLport pfam_35_0"
+echo $cmd
+result=$(mysql -h $SQLhost -u $SQLuser -p$SQLpassword -P $SQLport pfam_35_0 --quick \
+    -e "SHOW COLUMNS FROM uniprot_reg_full")
+echo $result
+
 echo pfamA_acc uniprot_acc seq_start seq_end model_start model_end domain_bits_score domain_evalue_score sequence_bits_score sequence_evalue_score sequence > $output
 while read row
 do

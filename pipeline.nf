@@ -51,6 +51,8 @@ process QUERY_DB {
     output:
     path 'proteins_per_domain.csv', emit: proteins_per_domain
     
+    beforeScript 'module load mysql'
+
     """
     query-db_v3.py --database ${params.afdatabase} --number_to_consider ${params.domains_to_consider} --proteins_per_class ${params.proteins_per_class}
     """
@@ -67,7 +69,7 @@ process QUERY_DB_TEST {
     path 'proteins_per_domain.csv', emit: proteins_per_domain
     
     """
-    echo "PF11361 A0A368WH52_9FIRM,A0A315REV6_9FIRM,A0A1E5HXZ1_9FIRM,A0A1I0AKN1_9FIRM,A0A1N6XNT3_9FIRM,A0A4R6SCZ4_9FIRM,M5ECE6_9FIRM,A0A4R6LDU5_9FIRM,E3DM68_HALPG,A0A2T5RRP8_9FIRM,A0A4R7Z519_9FIRM,E4RK56_HALHG,A0A7X6TSH1_CLOSP,A0A143YLW6_9LACT,A0A1W1IE60_9LACT,A0A847D4P1_9LACT,A0A0R2PT75_9MICO,A0A5C5ECL3_9LACT,A0A3P7S2P6_9FIRM,A0A1H6ETX2_9ACTN\n" > proteins_per_domain.csv
+    echo "PF11361 A0A368WH52_9FIRM,A0A315REV6_9FIRM,A0A1E5HXZ1_9FIRM,A0A1I0AKN1_9FIRM,A0A1N6XNT3_9FIRM,A0A4R6SCZ4_9FIRM,M5ECE6_9FIRM,A0A4R6LDU5_9FIRM,E3DM68_HALPG,A0A2T5RRP8_9FIRM,A0A4R7Z519_9FIRM,E4RK56_HALHG,A0A7X6TSH1_CLOSP,A0A143YLW6_9LACT,A0A1W1IE60_9LACT,A0A847D4P1_9LACT,A0A0R2PT75_9MICO,A0A5C5ECL3_9LACT,A0A3P7S2P6_9FIRM,A0A1H6ETX2_9ACTN" > proteins_per_domain.csv
     echo "PF15176 A0A3B5R9I5_XIPMA,A0A3Q7THB7_VULVU,A0A663F048_AQUCH,K7FNB5_PELSI,A0A811ZG69_NYCPR,A0A3P9IZ15_ORYLA,A0A383ZP48_BALAS,A0A3B3WEP9_9TELE,A0A6P9BDQ4_PANGU,G1NBL5_MELGA,A0A2I0M5B1_COLLI,A0A3Q1M5I3_BOVIN,K4G0F4_CALMI,A0A1U7TKA7_CARSF,A0A6I9IN50_VICPA,A0A5E4CM12_MARMO,A0A5C6NUQ8_9TELE,A0A1S3FIE4_DIPOR,A0A6P5PGU9_MUSCR,A0A5N4EAV5_CAMDR" >> proteins_per_domain.csv
     """
 }
@@ -82,6 +84,7 @@ process QUERY_DB_WITH_INPUT {
     output:
     path 'proteins_per_domain.csv', emit: proteins_per_domain
     
+    beforeScript 'module load mysql'
     """
     query-db_input.py --database ${params.afdatabase} --max_proteins ${params.proteins_per_class} --proteins_table ${params.proteins_table}
     """
@@ -100,6 +103,9 @@ process GET_SEQUENCES {
     output:
     path 'target_proteins.tsv', emit: proteins_info
     
+    beforeScript 'module load mysql'
+    
+    script:
     """
     get_sequences.sh -i ${proteins_per_domain} -o target_proteins.tsv -n ${params.proteins_per_class} -u ${params.pfamuser} -p ${params.pfampassword} -h ${params.pfamhost} -P ${params.pfamport}
     """
@@ -118,6 +124,9 @@ process DOWNLOAD_DOMAIN_LENGTHS {
     output: 
     path 'domain_lengths.csv'
     
+    beforeScript 'module load mysql'
+    
+    script:
     """
     domain_lenghts.sh -i ${proteins_info} -u ${params.pfamuser} -p ${params.pfampassword} -h ${params.pfamhost} -P ${params.pfamport}
     """
@@ -126,7 +135,9 @@ process DOWNLOAD_DOMAIN_LENGTHS {
 
 process GET_MSAS {
    
-   container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
+   //container 'docker://athbaltzis/colabfold_proteinfold:1.1.0' // this is failing with current db
+   //container 'docker://230218818/colabfold:1.5.5' // not having colabfold_search command
+   container 'docker://ghcr.io/sokrypton/colabfold:1.5.5-cuda12.2.2'
    memory '180GB' // normally 180
    tag 'get_msas'
    time '48h'
@@ -165,7 +176,8 @@ process GET_TEST_MSA {
 
 process PREDICT_NO_TEMPLATE {
    
-    container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
+    //container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
+    container 'docker://ghcr.io/sokrypton/colabfold:1.5.5-cuda12.2.2'
     tag 'predict_no_template'
     memory '10G'
     time '10h'
@@ -198,7 +210,8 @@ process PREDICT_NO_TEMPLATE {
 
 process GET_TEMPLATES {
     
-    container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
+    //container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
+    container 'docker://ghcr.io/sokrypton/colabfold:1.5.5-cuda12.2.2'
     tag 'get_templates'
     time '10m'
     publishDir "$params.outdir/AF2/templates/$domain/", mode: 'copy', pattern: '*.cif'
@@ -222,7 +235,8 @@ process GET_TEMPLATES {
 
 process PREDICT_TEMPLATE_MSA {
 
-    container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
+    //container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
+    container 'docker://ghcr.io/sokrypton/colabfold:1.5.5-cuda12.2.2'
     tag 'predict_no_template'
     memory '10G'
     time '10h'
@@ -257,7 +271,8 @@ process PREDICT_TEMPLATE_MSA {
 
 process PREDICT_TEMPLATE_SEQ {
 
-    container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
+    //container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
+    container 'docker://ghcr.io/sokrypton/colabfold:1.5.5-cuda12.2.2'
     tag 'predict_no_template'
     memory '15G'
     time '10h'

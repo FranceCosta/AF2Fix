@@ -2,7 +2,6 @@
 
 ### script to run the pipeline to improve custom proteins
 
-#!/usr/bin/env bash
 #SBATCH -o .log
 #SBATCH -e .err
 #SBATCH --mem 20GB
