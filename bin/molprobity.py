@@ -63,6 +63,8 @@ def runAndParse(pdb_path:str):
         _ = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
     except subprocess.CalledProcessError as exc:
         print("Status : FAIL", exc.returncode, exc.output)
+        import sys
+        sys.exit()
 
     with open("to_be_deleted.out", "rt") as fh:
         out = ""

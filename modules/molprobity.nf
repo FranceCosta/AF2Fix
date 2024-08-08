@@ -1,11 +1,11 @@
 process MOLPROBITY {
     container "docker://francecosta/molprobity:v0.0.1"
     tag 'molprobity'
-    memory '200MB'
-    time '12h'
+    memory '2GB'
+    time '2h'
     publishDir "$params.outdir/molprobity/${condition}/${domain}", mode: 'copy'
     //cache false
-    errorStrategy 'ignore'
+    //errorStrategy 'ignore'
 
     input:
     tuple path(structure), val(domain)

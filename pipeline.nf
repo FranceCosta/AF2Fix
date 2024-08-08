@@ -11,7 +11,7 @@ params.afdatabase = "/hps/nobackup/agb/interpro/mblum/alphafold/pfam-alphafold.s
 params.domains_to_consider = 50 // Number of protein domains to include in the pipeline
 params.proteins_per_class = 10 // Number of protein candidates to consider per class of AlphaFold confidence (<50, 50-70, >70 plddt). 10 more will be included and discarded by later script
 params.colabfold_database = "/hps/nobackup/agb/research/francesco/data/colabfold/20240226_databases"
-//params.colabfold_database =  "${workflow.projectDir}/assets/" //
+//params.colabfold_database =  """${workflow.projectDir}/assets/" //
 params.colabfold_cache = "${workflow.projectDir}/tmp/"
 params.test_msa = "${workflow.projectDir}/test"
 
@@ -26,7 +26,7 @@ include { MOLPROBITY as MOLPROB_TEMPLATE_SEQ } from "${workflow.projectDir}/modu
 
 process DOWNLOAD_COLABFOLD_WEIGHTS {
 
-    container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
+    container 'docker://ghcr.io/sokrypton/colabfold:1.5.3-cuda12.2.2'
     time '20m'
     memory '200MB'
     tag 'download_colabfold_weights'
@@ -135,23 +135,44 @@ process DOWNLOAD_DOMAIN_LENGTHS {
 
 process GET_MSAS {
    
-   //container 'docker://athbaltzis/colabfold_proteinfold:1.1.0' // this is failing with current db
-   //container 'docker://230218818/colabfold:1.5.5' // not having colabfold_search command
-   container 'docker://ghcr.io/sokrypton/colabfold:1.5.5-cuda12.2.2'
-   memory '180GB' // normally 180
-   tag 'get_msas'
-   time '48h'
-   publishDir "$params.outdir/AF2/MSAs", mode: 'copy'
-   
-   input:
-   path proteins_info
-   
-   output:
-   path ("PF*"), emit: path_to_msa
+    //container 'docker://athbaltzis/colabfold_proteinfold:1.1.0' // this is failing with current db
+    //container 'docker://230218818/colabfold:1.5.5' // not having colabfold_search command
+    container 'docker://ghcr.io/sokrypton/colabfold:1.5.5-cuda12.2.2' // has a bug and does not save MSAs under protein name
+    //container 'docker://ghcr.io/sokrypton/colabfold:1.5.3-cuda12.2.2' same
+    //container 'docker://ghcr.io/sokrypton/colabfold@sha256:ed7c0bb3280379cf1c5831d8229517b36bfb40cffe27e665adee1d0b6e8d8355' same
+    //container 'docker://nfcore/proteinfold_colabfold:1.0.0' // no colabfold_search command
+    //container 'docker://ghcr.io/sokrypton/colabfold@sha256:9576b632fccdc80f499e79ef5190e86ec7698e30b2ca012748e8eb176201b9bc' same MSA name bug
+    //container 'docker://ghcr.io/labdao/colabfold:nightly' no colabfold_search command
+    //container 'docker://ghcr.io/sokrypton/colabfold@sha256:40fec143e49896c06761cc02086d44d8303715e07b219d8c1ddc21cb7b41ebef' same MSA name bug
+    //container 'docker://lmansouri/colabfold:1.1.0' not compatible with db
 
-   """
-   generate_MSAs.sh -i ${proteins_info} -d ${params.colabfold_database}
-   """
+    
+    memory '180GB' // normally 180
+    tag 'get_msas'
+    time '48h'
+    publishDir "$params.outdir/AF2/MSAs", mode: 'copy'
+    
+    input:
+    path proteins_info
+    
+    output:
+    path ("PF*"), emit: path_to_msa
+
+    """
+    #generate_MSAs.sh -i ${proteins_info} -d ${params.colabfold_database}
+    # get sequences from file
+    tail -n +2 ${proteins_info} | cut -d ' ' -f 1,2,11 | awk -F ' ' '{print ">"\$1"_"\$2"\\n"\$3""}' > sequences.fa
+    # generate MSAs
+    colabfold_search.py --use-env 0 --use-templates 0 --threads 96 sequences.fa ${params.colabfold_database} ./
+    # split MSAs into domain folders
+    for MSA in \$( ls *.a3m )
+    do
+        domain=\$( head \$MSA -n 1 | tr ">" " " | tr "_" " " | awk '{ print \$1 }' )
+        protein=\$( head \$MSA -n 1 | tr ">" " " | tr "_" " " | awk '{ print \$2 }' )
+        mkdir -p \$domain
+        cp \$MSA \$domain/\$protein.a3m
+    done
+    """
 
 }
 
@@ -176,10 +197,9 @@ process GET_TEST_MSA {
 
 process PREDICT_NO_TEMPLATE {
    
-    //container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
     container 'docker://ghcr.io/sokrypton/colabfold:1.5.5-cuda12.2.2'
     tag 'predict_no_template'
-    memory '10G'
+    memory '20G'
     time '10h'
     clusterOptions '--gres=gpu:a100:1'
     containerOptions '--nv'
@@ -210,10 +230,11 @@ process PREDICT_NO_TEMPLATE {
 
 process GET_TEMPLATES {
     
-    //container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
     container 'docker://ghcr.io/sokrypton/colabfold:1.5.5-cuda12.2.2'
+
     tag 'get_templates'
     time '10m'
+    memory '200MB'
     publishDir "$params.outdir/AF2/templates/$domain/", mode: 'copy', pattern: '*.cif'
     publishDir "$params.outdir/AF2/templates/$domain/", mode: 'copy', pattern: '.mapper.json'
 
@@ -235,10 +256,10 @@ process GET_TEMPLATES {
 
 process PREDICT_TEMPLATE_MSA {
 
-    //container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
     container 'docker://ghcr.io/sokrypton/colabfold:1.5.5-cuda12.2.2'
+
     tag 'predict_no_template'
-    memory '10G'
+    memory '20G'
     time '10h'
     clusterOptions '--gres=gpu:a100:1'
     containerOptions '--nv'
@@ -271,10 +292,10 @@ process PREDICT_TEMPLATE_MSA {
 
 process PREDICT_TEMPLATE_SEQ {
 
-    //container 'docker://athbaltzis/colabfold_proteinfold:1.1.0'
     container 'docker://ghcr.io/sokrypton/colabfold:1.5.5-cuda12.2.2'
+
     tag 'predict_no_template'
-    memory '15G'
+    memory '20G'
     time '10h'
     clusterOptions '--gres=gpu:a100:1'
     containerOptions '--nv'
@@ -320,6 +341,7 @@ process COLLECT_RESULTS {
     label 'python38'
     time '2h'
     tag 'collect_results'
+    memory '4GB'
     publishDir "$params.outdir/summary_results/", mode: 'copy' // this finishes after pipeline has completed lol
     // saveAs
 
