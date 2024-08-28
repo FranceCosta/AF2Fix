@@ -4,7 +4,7 @@ params.pfamuser = "admin"     // user name for MySQL pfam database
 params.pfampassword = "" // password for MySQL pfam database
 params.pfamhost = "mysql-pfam-rel" // hostname for MySQL database
 params.pfamport = "" // port for MySQL database
-params.proteins_table = "${workflow.projectDir}/example/protein_table.csv" // input protein table to run pipeline on customized proteins. Run with -entry improve
+params.proteins_table = "${workflow.projectDir}/example/protein_table.csv" // input protein table to run pipeline on customized proteins. Used only with -entry improve
 params.outdir  = "${workflow.projectDir}/output"
 params.afdatabase = "/hps/nobackup/agb/interpro/mblum/alphafold/pfam-alphafold.sqlite.old" // db with per-domain af distribution
 //params.afdatabase = "${workflow.projectDir}/assets/pfam-alphafold.sqlite"
@@ -26,7 +26,8 @@ include { MOLPROBITY as MOLPROB_TEMPLATE_SEQ } from "${workflow.projectDir}/modu
 
 process DOWNLOAD_COLABFOLD_WEIGHTS {
 
-    container 'docker://ghcr.io/sokrypton/colabfold:1.5.3-cuda12.2.2'
+    //container 'docker://ghcr.io/sokrypton/colabfold:1.5.3-cuda12.2.2'
+    container 'docker://ghcr.io/sokrypton/colabfold:1.5.5-cuda12.2.2'
     time '20m'
     memory '200MB'
     tag 'download_colabfold_weights'
@@ -134,19 +135,8 @@ process DOWNLOAD_DOMAIN_LENGTHS {
 }
 
 process GET_MSAS {
-   
-    //container 'docker://athbaltzis/colabfold_proteinfold:1.1.0' // this is failing with current db
-    //container 'docker://230218818/colabfold:1.5.5' // not having colabfold_search command
-    container 'docker://ghcr.io/sokrypton/colabfold:1.5.5-cuda12.2.2' // has a bug and does not save MSAs under protein name
-    //container 'docker://ghcr.io/sokrypton/colabfold:1.5.3-cuda12.2.2' same
-    //container 'docker://ghcr.io/sokrypton/colabfold@sha256:ed7c0bb3280379cf1c5831d8229517b36bfb40cffe27e665adee1d0b6e8d8355' same
-    //container 'docker://nfcore/proteinfold_colabfold:1.0.0' // no colabfold_search command
-    //container 'docker://ghcr.io/sokrypton/colabfold@sha256:9576b632fccdc80f499e79ef5190e86ec7698e30b2ca012748e8eb176201b9bc' same MSA name bug
-    //container 'docker://ghcr.io/labdao/colabfold:nightly' no colabfold_search command
-    //container 'docker://ghcr.io/sokrypton/colabfold@sha256:40fec143e49896c06761cc02086d44d8303715e07b219d8c1ddc21cb7b41ebef' same MSA name bug
-    //container 'docker://lmansouri/colabfold:1.1.0' not compatible with db
 
-    
+    container 'docker://ghcr.io/sokrypton/colabfold:1.5.5-cuda12.2.2'
     memory '180GB' // normally 180
     tag 'get_msas'
     time '48h'
@@ -167,10 +157,10 @@ process GET_MSAS {
     # split MSAs into domain folders
     for MSA in \$( ls *.a3m )
     do
-        domain=\$( head \$MSA -n 1 | tr ">" " " | tr "_" " " | awk '{ print \$1 }' )
-        protein=\$( head \$MSA -n 1 | tr ">" " " | tr "_" " " | awk '{ print \$2 }' )
+        domain=\$( basename \$MSA .a3m | tr "_" " " | awk '{ print \$1 }' )
+        protein=\$( basename \$MSA .a3m | tr "_" " " | awk '{ print \$2 }' )
         mkdir -p \$domain
-        cp \$MSA \$domain/\$protein.a3m
+        mv \$MSA \$domain/\$protein.a3m
     done
     """
 
@@ -258,7 +248,7 @@ process PREDICT_TEMPLATE_MSA {
 
     container 'docker://ghcr.io/sokrypton/colabfold:1.5.5-cuda12.2.2'
 
-    tag 'predict_no_template'
+    tag 'predict_template_msa'
     memory '20G'
     time '10h'
     clusterOptions '--gres=gpu:a100:1'
