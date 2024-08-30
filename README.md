@@ -46,7 +46,8 @@ The scripts contained in [scripts](scripts/) were also adopted:
 - get_distribution.py was used to extract the whole plDDT pfam distributions;
 - get_domain_info.sh was used to extract the information about domains considered in the paper;
 
-The [images](images) can be reproduced using [this notebook](generate_figures.ipynb) after downloading the results ...
+The [images](images) can be reproduced using [this notebook](generate_figures.ipynb) after downloading the results from [here](https://drive.google.com/file/d/1kwVIoCmdlwoiTmVcZTmeGr6ymd4xEy4g/view?usp=drive_link) and unzipping them.
+
 The workflow image was obtained with [draw.io](https://www.drawio.com/).
 Dependencies needed for image generation: python 3.8, seaborn (version 12.2), pandas (version 1.5.3), matplotlib (version 3.6.2), numpy (version 1.24.3), Biopython (version 1.81), scikit-learn (version 1.2.2), 
 
