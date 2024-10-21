@@ -2,3 +2,4 @@
 - afdb_protein_info.csv obtained with scripts/get_all_data_from_DB.py, contains all informations related to each protein herein analyzed derived from the pfam-alphafold database;
 - distributions.json obtained with scripts/get_distribution.py, contains the pLDDT distributions derived from the alphafold database;
 - *.png files are images of structures used to build figure1 of the paper;
+- domains_bimodal_distribution.xlsx contains the list of domains showing bimodal distributions of plDDT;

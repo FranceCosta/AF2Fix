@@ -1,4 +1,9 @@
-# Nextflow pipeline to perform AlphaFold-derived template modelling
+# Code of "Keeping it in the family: Using protein family templates to rescue low confidence AlphaFold2 models" paper
+
+## Data:
+- [Table with domains showing plDDT bimodal distributions](data/domains_bimodal_distribution.xlsx)
+- [Comparison with AF3](data/AF3)
+- Other data are available at: [https://zenodo.org/records/13960775](https://zenodo.org/records/13960775)
 
 ## Graphical diagram
 
@@ -45,6 +50,7 @@ The scripts contained in [scripts](scripts/) were also adopted:
 - estimate_co2.sh was used to estimate the amount of CO2 produced with the computation;
 - get_distribution.py was used to extract the whole plDDT pfam distributions;
 - get_domain_info.sh was used to extract the information about domains considered in the paper;
+- seed_AF2.py was used to run AF2 with multiple seeds;
 
 The [images](images) can be reproduced using [this notebook](generate_figures.ipynb) after downloading the results folder from [here](https://drive.google.com/file/d/1kwVIoCmdlwoiTmVcZTmeGr6ymd4xEy4g/view?usp=drive_link) and uncompressing it.
 
